@@ -1,6 +1,6 @@
 {
   "name": "@cyesuta/bark-agent-sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Programmatic Bark agent SDK extracted from BarkIDE.",
   "main": "index.mjs",
@@ -29,6 +29,10 @@
     "docs/",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyesuta/BarkAgentSDK.git"
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },

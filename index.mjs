@@ -1,5 +1,6 @@
 export { BarkClient } from './client/BarkClient.mjs';
 export { Session } from './client/Session.mjs';
+export { BarkEventBus } from './client/events.mjs';
 export { defineAction, buildActionHub } from './tools/action.mjs';
 export { registerBuiltinActions, BUILTIN_TOOL_NAMES } from './tools/builtins.mjs';
 export { scanLocalActions, scanDispatcherTasks } from './tools/scanner.mjs';

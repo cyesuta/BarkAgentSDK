@@ -1,4 +1,4 @@
-import { EventEmitter } from 'node:events';
+import { BarkEventBus } from './events.mjs';
 import { Session } from './Session.mjs';
 import { defineAction } from '../tools/action.mjs';
 import { vaults, dropVault } from '../core/vault.mjs';
@@ -16,7 +16,7 @@ export class BarkClient {
   constructor(config = {}) {
     ensureDefaultProviders();
     this.config = { ...config };
-    this._events = new EventEmitter();
+    this._events = new BarkEventBus();
     this._tools = new Map();
     this._sessions = new Map();
   }
@@ -61,7 +61,6 @@ export class BarkClient {
   }
 
   emit(event, data) {
-    if (event === 'error' && this._events.listenerCount('error') === 0) return;
     this._events.emit(event, data);
   }
 
