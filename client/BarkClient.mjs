@@ -61,6 +61,7 @@ export class BarkClient {
   }
 
   emit(event, data) {
+    if (event === 'error' && this._events.listenerCount('error') === 0) return;
     this._events.emit(event, data);
   }
 
