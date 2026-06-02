@@ -1,6 +1,3 @@
-# Private docs (internal planning, not for public repo)
-docs/
-
 # Node
 node_modules/
 npm-debug.log*

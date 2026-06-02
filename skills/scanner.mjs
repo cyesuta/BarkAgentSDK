@@ -18,27 +18,29 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const SKILL_ROOTS = [
-  ".barkide",   // NTR-native, no junction required
-  ".agents",
-  ".claude",
-  "",           // bare `skills/`
+export const DEFAULT_SKILL_DIRS = [
+  ".barkide/skills",
+  ".agents/skills",
+  ".claude/skills",
+  "skills",
 ];
-
-const SKILL_SUBDIR = "skills";
 
 /**
  * Scan for available skill names.
  * @param {string} cwd — project working directory
+ * @param {{skillDirs?: string[]}} [options]
  * @returns {string[]} — deduplicated skill names
  */
-export function capabilityScanner(cwd) {
+export function capabilityScanner(cwd, options = {}) {
   if (!cwd) return [];
+  const skillDirs = Array.isArray(options.skillDirs) && options.skillDirs.length > 0
+    ? options.skillDirs
+    : DEFAULT_SKILL_DIRS;
   const names = [];
   const seen = new Set();
 
-  for (const root of SKILL_ROOTS) {
-    const dir = root ? path.join(cwd, root, SKILL_SUBDIR) : path.join(cwd, SKILL_SUBDIR);
+  for (const skillDir of skillDirs) {
+    const dir = path.resolve(cwd, skillDir);
     if (!fs.existsSync(dir)) continue;
     let entries;
     try { entries = fs.readdirSync(dir); } catch { continue; }

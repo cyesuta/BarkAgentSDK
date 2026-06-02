@@ -9,13 +9,27 @@ import { defineAction } from "./action.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
+export const BUILTIN_TOOL_NAMES = [
+  "Read",
+  "Glob",
+  "Grep",
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "Bash",
+  "web_search",
+  "fetch_url",
+];
+
 /**
- * Register all built-in tools.
+ * Register built-in tools.
  * @param {string} workspace
+ * @param {{allowed?: string[]}} [options]
  * @returns {Array}
  */
-export function registerBuiltinActions(workspace = "") {
-  return [
+export function registerBuiltinActions(workspace = "", options = {}) {
+  const allowed = Array.isArray(options.allowed) ? new Set(options.allowed) : null;
+  const actions = [
     defineAction(
       "Read",
       "Read a UTF-8 text file from the local filesystem. Absolute paths are allowed; relative paths resolve from the current workspace.",
@@ -156,6 +170,9 @@ export function registerBuiltinActions(workspace = "") {
       fetchUrlHandler
     ),
   ];
+  return allowed
+    ? actions.filter((action) => allowed.has(action?.spec?.function?.name))
+    : actions;
 }
 
 function requireWorkspace(workspace) {

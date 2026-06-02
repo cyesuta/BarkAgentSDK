@@ -40,11 +40,11 @@ function timeMarker(vault, isNewMotor) {
     : `[Current date: ${formatted}. Use this as today's date; do not rely on your training cutoff.]\n\n`;
 }
 
-function buildSystemMessages(systemPrompt, cwd) {
+function buildSystemMessages(systemPrompt, cwd, options = {}) {
   const messages = [];
   if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
 
-  const skills = capabilityScanner(cwd);
+  const skills = capabilityScanner(cwd, { skillDirs: options.skillDirs });
   const skillPrompt = skills.length > 0 ? injectCapabilities(skills) : '';
   if (skillPrompt) {
     const existing = messages.find((m) => m.role === 'system');
@@ -85,12 +85,9 @@ function toPictures(images) {
 
 function builtinActions(cwd, builtinTools) {
   if (builtinTools === false) return [];
-  const actions = registerBuiltinActions(cwd);
-  if (Array.isArray(builtinTools)) {
-    const allowed = new Set(builtinTools);
-    return actions.filter((action) => allowed.has(action?.spec?.function?.name));
-  }
-  return actions;
+  return registerBuiltinActions(cwd, {
+    allowed: Array.isArray(builtinTools) ? builtinTools : undefined,
+  });
 }
 
 export class Session {
@@ -161,12 +158,14 @@ export class Session {
 
     const isNewMotor = this.vault.motor === null && this.vault.messages.length === 0;
     const fullMessage = timeMarker(this.vault, isNewMotor) + String(message || '').trim();
-    const { messages: systemMessages, skills } = buildSystemMessages(systemPrompt, cwd);
+    const { messages: systemMessages, skills } = buildSystemMessages(systemPrompt, cwd, {
+      skillDirs: merged.skillDirs,
+    });
     const msgs = [...systemMessages, ...this.vault.messages];
     msgs.push(buildUserMessage(fullMessage, this.vault.pictures, provider));
 
     let projectActions = [];
-    try { projectActions = await scanLocalActions(cwd); } catch { /* local tools are optional */ }
+    try { projectActions = await scanLocalActions(cwd, { toolsDir: merged.toolsDir }); } catch { /* local tools are optional */ }
     try { projectActions.push(...await scanDispatcherTasks(cwd)); } catch { /* dispatcher tasks are optional */ }
     if (Object.keys(this.vault.pictures).length > 0 && !hasNativeVision(provider)) {
       projectActions.push(...outlinePicture(this.vault.pictures));

@@ -6,7 +6,7 @@
  * zero naming overlap.
  *
  * Directories scanned:
- *   <cwd>/.barkide/tools/<name>/tool.json   — first-class manifest
+ *   <cwd>/<toolsDir>/<name>/tool.json       — first-class manifest
  *   <cwd>/src-tauri/mcp_tools/*.py           — dispatcher scripts
  */
 
@@ -17,11 +17,13 @@ import { defineAction } from "./action.mjs";
 /**
  * Scan for first-class tool manifests.
  * @param {string} cwd
+ * @param {{toolsDir?: string}} [options]
  * @returns {Promise<Array>} — array of defineAction() results
  */
-export async function scanLocalActions(cwd) {
+export async function scanLocalActions(cwd, options = {}) {
   if (!cwd) return [];
-  const root = path.join(cwd, ".barkide", "tools");
+  const toolsDir = options.toolsDir || ".barkide/tools";
+  const root = path.resolve(cwd, toolsDir);
   if (!fs.existsSync(root)) return [];
 
   const actions = [];
@@ -98,8 +100,7 @@ export async function scanDispatcherTasks(cwd) {
 
 function makeScriptHandler(toolDir, command) {
   return async (params) => {
-    const proc = Bun ? null : await spawnCommand(command, toolDir, params);
-    return proc;
+    return await spawnCommand(command, toolDir, params);
   };
 }
 
@@ -118,7 +119,7 @@ function makeDispatcherHandler(root, cwd, available) {
       throw new Error(`Script not found: ${targetName}. Available: ${available.join(", ")}`);
     }
     return await spawnCommand(
-      [process.execPath === process.argv[0] ? "python" : process.execPath, script],
+      ["python", script],
       cwd,
       targetArgs
     );

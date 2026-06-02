@@ -1,1 +1,1 @@
-module.exports = import('./index.mjs');
+module.exports = require('./index.mjs');
