@@ -1,0 +1,29 @@
+{
+  "name": "@cyesuta/bark-agent-sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Programmatic Bark agent SDK extracted from BarkIDE.",
+  "main": "index.mjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "index.cjs",
+    "client/",
+    "core/",
+    "protocol/",
+    "providers/",
+    "tools/",
+    "skills/",
+    "pricing/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
