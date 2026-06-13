@@ -87,6 +87,25 @@ export async function parseOpenAIStream(resp, onEvent, messages = null) {
   let assistantText = "";
   const toolCallsByIdx = {};
 
+  // ── Stream idle timeout ──────────────────────────────────────────────
+  // If no data arrives for STREAM_IDLE_TIMEOUT_MS, cancel the reader so
+  // the while-loop breaks instead of hanging forever.
+  const STREAM_IDLE_TIMEOUT_MS = 120_000;
+  let streamTimer = null;
+  const resetIdleTimer = () => {
+    if (streamTimer) clearTimeout(streamTimer);
+    streamTimer = setTimeout(() => {
+      reader.cancel("Stream idle timeout").catch(() => {});
+    }, STREAM_IDLE_TIMEOUT_MS);
+  };
+  const clearIdleTimer = () => {
+    if (streamTimer) { clearTimeout(streamTimer); streamTimer = null; }
+  };
+  const readWithTimeout = async () => {
+    resetIdleTimer();
+    return await reader.read();
+  };
+
   // ── Reasoning accumulator ────────────────────────────────────────────
   // Collects ALL reasoning tokens (whether from the dedicated
   // `reasoning_content` delta field or from `<think>` tags embedded in
@@ -204,7 +223,7 @@ export async function parseOpenAIStream(resp, onEvent, messages = null) {
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readWithTimeout();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
@@ -309,14 +328,24 @@ export async function parseOpenAIStream(resp, onEvent, messages = null) {
         }
       }
     }
+    clearIdleTimer();
   } catch (err) {
+    clearIdleTimer();
     if (err.name === "AbortError") throw err;
-    // Stream interrupted — flush partial reasoning, still return partial usage
+    // Stream idle timeout or other read error — flush partial reasoning,
+    // return a faulted TurnSummary so the turn doesn't hang forever.
     if (thinkTagBuf) {
       if (insideThinkTag) reasoningAccum += thinkTagBuf;
       thinkTagBuf = "";
     }
     flushReasoning();
+    return new TurnSummary({
+      ok: false,
+      fault: `stream error: ${err.message || err}`,
+      tokensIn,
+      tokensOut,
+      tokensCache,
+    });
   }
 
   const toolCalls = Object.keys(toolCallsByIdx)

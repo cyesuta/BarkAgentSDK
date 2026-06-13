@@ -13,6 +13,14 @@ import { computeCharge } from "../pricing/table.mjs";
 const MAX_ROUNDS = 150;
 
 /**
+ * Per-tool dispatch timeout. If a tool handler (Read, Write, Bash, CodeGraph,
+ * etc.) takes longer than this, the dispatch is treated as failed and the
+ * action cycle continues with an error message — prevents one stuck tool
+ * call from hanging the entire agent loop.
+ */
+const TOOL_TIMEOUT_MS = 120_000;
+
+/**
  * Run the action cycle.
  *
  * @param {Function} providerRunner — async (cfg, signal, onEvent, messages, tools) => TurnSummary
@@ -78,7 +86,15 @@ export async function actionCycle(providerRunner, cfg, signal, onEvent, messages
         params: parsedArgs,
       });
 
-      const { outcome, failed } = await actionHub.dispatch(tc.function.name, parsedArgs);
+      // Dispatch with timeout: one stuck tool should not hang the
+      // entire agent loop.
+      const dispatchResult = await Promise.race([
+        actionHub.dispatch(tc.function.name, parsedArgs),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`tool '${tc.function.name}' timed out after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
+        ),
+      ]);
+      const { outcome, failed } = dispatchResult;
 
       onEvent("outcome", { ref: tc.id, outcome, failed });
 
