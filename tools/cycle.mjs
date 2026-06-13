@@ -10,7 +10,7 @@
 import { TurnSummary } from "../protocol/packets.mjs";
 import { computeCharge } from "../pricing/table.mjs";
 
-const MAX_ROUNDS = 25;
+const MAX_ROUNDS = 150;
 
 /**
  * Run the action cycle.

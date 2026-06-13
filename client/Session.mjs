@@ -217,7 +217,12 @@ export class Session {
 
     try {
       const providerRunner = resolveProvider(provider).runner;
-      this.vault.motor = { cfg, halt: () => this._abortCtrl.abort(), scrap: async () => this._abortCtrl.abort() };
+      const turnAbortCtrl = this._abortCtrl;
+      this.vault.motor = {
+        cfg,
+        halt: () => turnAbortCtrl?.abort(),
+        scrap: async () => turnAbortCtrl?.abort(),
+      };
       this.vault.channel = provider;
       this.vault.endpoint = baseUrl;
       this.vault.workspace = cwd;
