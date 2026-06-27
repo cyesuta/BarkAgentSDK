@@ -11,7 +11,7 @@ import { parseOpenAIStream } from "./deepseek.mjs";
 const OPENAI_DEFAULTS = {
   kimi:   { endpoint: "https://api.moonshot.cn/v1/chat/completions",   model: "kimi-k2.6" },
   qwen:   { endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", model: "qwen-plus" },
-  glm:    { endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", model: "glm-5.1" },
+  glm:    { endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", model: "glm-5.2" },
   grok:   { endpoint: "https://api.x.ai/v1/chat/completions",          model: "grok-4.3" },
   doubao: { endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", model: "doubao-seed-2-0-pro-260215" },
   mimo:   { endpoint: "https://api.xiaomimimo.com/v1/chat/completions", model: "mimo-v2.5" },

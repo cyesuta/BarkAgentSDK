@@ -30,7 +30,17 @@ export function pricingTable(alias, variant) {
     return [4.0, 16.0, 1.0, true];
   }
   if (prov === "qwen") return [2.5, 10.0, 1.0, true];
-  if (prov === "glm") return [6.0, 24.0, 1.3, true];
+  if (prov === "glm") {
+    if (m.includes("5.2"))                     return [10.0, 40.0, 2.0, true];   // glm-5.2 旗艦 1M ctx
+    if (m.includes("5.1"))                     return [10.0, 32.0, 1.8, true];   // glm-5.1
+    if (m.includes("5-turbo") || m.includes("5_turbo")) return [8.6, 28.8, 1.5, true]; // glm-5-turbo
+    if (m.includes("5"))                       return [7.2, 23.0, 1.3, true];    // glm-5
+    if (m.includes("4.7-flash") || m.includes("4.7_flash")) return [0, 0, 0, true]; // 免費
+    if (m.includes("4.7"))                     return [4.3, 15.8, 0.8, true];    // glm-4.7
+    if (m.includes("4.6"))                     return [4.3, 15.8, 0.8, true];    // glm-4.6
+    if (m.includes("4.5-air") || m.includes("4.5_air")) return [1.4, 7.9, 0.3, true]; // glm-4.5-air
+    return [10.0, 32.0, 1.8, true]; // fallback = 5.1 tier
+  }
   if (prov === "doubao") {
     if (m.includes("lite")) return [0.6, 3.6, 0.12, true];
     if (m.includes("mini")) return [0.2, 2.0, 0.04, true];
