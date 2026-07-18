@@ -25,7 +25,10 @@ export function pricingTable(alias, variant) {
     return [0.14, 0.28, 0.02, true];
   }
   if (prov === "kimi") {
+    // kimi-k3: 1M ctx, 2.8T params — pricing TBD, estimate ~¥12/¥48 based on capability tier
+    if (m.includes("k3")) return [12.0, 48.0, 2.0, true];
     if (m.includes("turbo")) return [8.0, 58.0, 1.0, true];
+    if (m.includes("k2.7") || m.includes("k2-7")) return [8.0, 32.0, 1.5, true]; // k2.7-code
     if (m.includes("k2.6") || m.includes("k2-6") || !m) return [6.5, 27.0, 1.1, true];
     return [4.0, 16.0, 1.0, true];
   }
@@ -48,7 +51,13 @@ export function pricingTable(alias, variant) {
   }
   if (prov === "grok") return [3.0, 15.0, 0.75, false];
   if (prov === "gemini") return [2.0, 12.0, 0.5, false];
-  if (prov === "codex") return [2.5, 10.0, 1.25, false];  // reference (subscription-flat)
+  if (prov === "codex") {
+    // GPT-5.6 series pricing (USD/M tokens)
+    if (m.includes("5.6-sol") || m.includes("sol")) return [5.0, 20.0, 1.5, false];
+    if (m.includes("5.6-luna") || m.includes("luna")) return [1.0, 4.0, 0.5, false];
+    if (m.includes("5.6") || m.includes("terra")) return [2.5, 10.0, 1.0, false]; // terra = balanced
+    return [2.5, 10.0, 1.25, false];  // reference (subscription-flat, gpt-5.5 tier)
+  }
 
   return null;
 }
