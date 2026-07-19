@@ -394,7 +394,7 @@ async function bashTool(workspace, params) {
   const timeout = Math.min(120000, Math.max(1000, Number(params.timeout_ms || 30000)));
   const { exec } = await import("node:child_process");
   return await new Promise((resolve, reject) => {
-    exec(command, {
+    const child = exec(command, {
       cwd: root,
       timeout,
       windowsHide: true,
@@ -410,6 +410,10 @@ async function bashTool(workspace, params) {
         resolve(out.slice(0, 12000));
       }
     });
+    // Close stdin immediately — prevents interactive commands from hanging
+    // waiting for user input (especially on Windows where some commands
+    // detect a tty and prompt).
+    if (child.stdin) child.stdin.end();
   });
 }
 

@@ -14,11 +14,14 @@ const MAX_ROUNDS = 150;
 
 /**
  * Per-tool dispatch timeout. If a tool handler (Read, Write, Bash, CodeGraph,
- * etc.) takes longer than this, the dispatch is treated as failed and the
- * action cycle continues with an error message — prevents one stuck tool
- * call from hanging the entire agent loop.
+ * etc.) takes longer than this, a timeout error is returned as the tool_result
+ * so the model can decide what to do next — prevents one stuck tool call from
+ * hanging the entire agent loop.
+ *
+ * Configurable via BARK_TOOL_TIMEOUT_MS env var (min 30s, max 600s).
  */
-const TOOL_TIMEOUT_MS = 120_000;
+const TOOL_TIMEOUT_MS = Math.max(30_000, Math.min(600_000,
+  Number(process.env.BARK_TOOL_TIMEOUT_MS) || 120_000));
 
 /**
  * Run the action cycle.
@@ -87,14 +90,23 @@ export async function actionCycle(providerRunner, cfg, signal, onEvent, messages
       });
 
       // Dispatch with timeout: one stuck tool should not hang the
-      // entire agent loop.
-      const dispatchResult = await Promise.race([
-        actionHub.dispatch(tc.function.name, parsedArgs),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`tool '${tc.function.name}' timed out after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
-        ),
-      ]);
-      const { outcome, failed } = dispatchResult;
+      // entire agent loop. Timeout is non-fatal — returned as a tool_result
+      // so the model can retry or adjust its approach.
+      let outcome, failed;
+      try {
+        const dispatchResult = await Promise.race([
+          actionHub.dispatch(tc.function.name, parsedArgs),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`tool '${tc.function.name}' timed out after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
+          ),
+        ]);
+        outcome = dispatchResult.outcome;
+        failed = dispatchResult.failed;
+      } catch (err) {
+        // Timeout or unexpected tool error — surface as tool_result, not a fatal crash
+        outcome = `[ERROR] ${err.message}`;
+        failed = true;
+      }
 
       onEvent("outcome", { ref: tc.id, outcome, failed });
 
