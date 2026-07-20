@@ -62,6 +62,15 @@ Runs one turn. Callback names:
 
 Returns a turn result with `ok`, `success`, `aborted`, `fault`, token counts, `cost`, `durationMs`, and `sessionId`.
 
+New integrations should read `result.usage.turn`, whose counters are scoped to
+this `send()` only. `inputTokens` excludes cached input, `totalInputTokens`
+retains the provider-reported prompt total, and `cacheReadTokens` is disjoint
+from `inputTokens`. `modelCalls` is the number of provider rounds performed by
+the request and `available` is false when no billable usage was observed.
+
+The legacy `tokensIn`, `tokensOut`, and `tokensCache` fields remain available;
+`tokensIn` may include `tokensCache` and is retained only for compatibility.
+
 ### `session.abort()`
 
 Aborts the current turn.

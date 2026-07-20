@@ -11,7 +11,7 @@ registerProvider('mock-e2e', 'Mock E2E', async (_cfg, signal, onEvent, messages)
   if (last?.role === 'tool') {
     onEvent('text', `final:${last.content}`);
     messages.push({ role: 'assistant', content: `final:${last.content}` });
-    return new TurnSummary({ ok: true, tokensIn: 7, tokensOut: 11 });
+    return new TurnSummary({ ok: true, tokensIn: 7, tokensOut: 11, tokensCache: 2 });
   }
 
   onEvent('reason', 'thinking');
@@ -59,6 +59,20 @@ test('BarkClient Session.send runs an end-to-end mocked tool turn', async () => 
   assert.equal(result.ok, true);
   assert.equal(result.tokensIn, 10);
   assert.equal(result.tokensOut, 16);
+  assert.equal(result.tokensCache, 2);
+  assert.equal(result.numTurns, 2);
+  assert.equal(result.usageAvailable, true);
+  assert.deepEqual(result.usage.turn, {
+    scope: 'turn',
+    inputTokens: 8,
+    totalInputTokens: 10,
+    outputTokens: 16,
+    cacheReadTokens: 2,
+    cacheCreationTokens: 0,
+    cost: result.cost,
+    modelCalls: 2,
+    available: true,
+  });
   assert.equal(result.sessionId, 'mock-e2e-session');
   assert.deepEqual(callbacks, [
     ['thinking', 'thinking'],
@@ -79,5 +93,31 @@ test('BarkClient Session.send runs an end-to-end mocked tool turn', async () => 
 
   await session.reset();
   assert.deepEqual(session.getHistory(), []);
+  client.destroy();
+});
+
+test('Session usage is scoped to each send and never accumulates across sends', async () => {
+  registerProvider('mock-usage-scope', 'Mock Usage Scope', async (_cfg, _signal, _onEvent, messages) => {
+    messages.push({ role: 'assistant', content: 'ok' });
+    return new TurnSummary({ ok: true, tokensIn: 9, tokensOut: 4, tokensCache: 3 });
+  });
+  const client = new BarkClient({ provider: 'mock-usage-scope', builtinTools: false });
+  const session = client.session({ cwd: process.cwd(), sessionId: 'mock-usage-scope' });
+
+  const first = await session.send('first');
+  const second = await session.send('second');
+
+  assert.equal(first.usage.turn.scope, 'turn');
+  assert.equal(first.usage.turn.totalInputTokens, 9);
+  assert.equal(first.usage.turn.inputTokens, 6);
+  assert.equal(first.usage.turn.cacheReadTokens, 3);
+  assert.equal(first.usage.turn.outputTokens, 4);
+  assert.equal(first.usage.turn.modelCalls, 1);
+  assert.equal(second.usage.turn.totalInputTokens, 9);
+  assert.equal(second.usage.turn.inputTokens, 6);
+  assert.equal(second.usage.turn.cacheReadTokens, 3);
+  assert.equal(second.usage.turn.outputTokens, 4);
+  assert.equal(second.usage.turn.modelCalls, 1);
+
   client.destroy();
 });
