@@ -94,12 +94,17 @@ export async function actionCycle(providerRunner, cfg, signal, onEvent, messages
       // so the model can retry or adjust its approach.
       let outcome, failed;
       try {
+        let timeoutId;
+        const timeout = new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error(`tool '${tc.function.name}' timed out after ${TOOL_TIMEOUT_MS}ms`)),
+            TOOL_TIMEOUT_MS,
+          );
+        });
         const dispatchResult = await Promise.race([
           actionHub.dispatch(tc.function.name, parsedArgs),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`tool '${tc.function.name}' timed out after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
-          ),
-        ]);
+          timeout,
+        ]).finally(() => clearTimeout(timeoutId));
         outcome = dispatchResult.outcome;
         failed = dispatchResult.failed;
       } catch (err) {

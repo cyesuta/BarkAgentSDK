@@ -232,6 +232,12 @@ export class Session {
         : await actionCycle(providerRunner, cfg, this._abortCtrl.signal, onEvent, msgs, actionHub);
       const durationMs = Date.now() - start;
       const cost = computeCharge(provider, model, result.tokensIn, result.tokensOut, result.tokensCache) || result.charge || 0;
+      const totalInputTokens = result.tokensIn || 0;
+      const cacheReadTokens = result.tokensCache || 0;
+      const inputTokens = Math.max(0, totalInputTokens - cacheReadTokens);
+      const outputTokens = result.tokensOut || 0;
+      const numTurns = result.rounds || 1;
+      const usageAvailable = totalInputTokens > 0 || outputTokens > 0 || cacheReadTokens > 0 || cost > 0;
 
       if (result.ok) {
         this.vault.messages = stripSystemMessages(msgs);
@@ -246,18 +252,58 @@ export class Session {
         success: result.ok,
         aborted: !result.ok && result.fault === 'aborted',
         fault: result.fault || '',
-        tokensIn: result.tokensIn || 0,
-        tokensOut: result.tokensOut || 0,
-        tokensCache: result.tokensCache || 0,
+        // Legacy fields retain their existing meaning for backwards
+        // compatibility: tokensIn is provider-reported total prompt input and
+        // may include cached tokens. New integrations should use usage.turn.
+        tokensIn: totalInputTokens,
+        tokensOut: outputTokens,
+        tokensCache: cacheReadTokens,
         cost,
         durationMs,
         sessionId: this.id,
+        numTurns,
+        usageAvailable,
+        usage: {
+          turn: {
+            scope: 'turn',
+            inputTokens,
+            totalInputTokens,
+            outputTokens,
+            cacheReadTokens,
+            cacheCreationTokens: 0,
+            cost,
+            modelCalls: numTurns,
+            available: usageAvailable,
+          },
+        },
       };
       callbacks.onDone?.(turn);
       emit('done', { stats: turn });
       return turn;
     } catch (error) {
-      const turn = { ok: false, success: false, aborted: false, fault: error.message, durationMs: Date.now() - start, sessionId: this.id };
+      const turn = {
+        ok: false,
+        success: false,
+        aborted: false,
+        fault: error.message,
+        durationMs: Date.now() - start,
+        sessionId: this.id,
+        numTurns: 0,
+        usageAvailable: false,
+        usage: {
+          turn: {
+            scope: 'turn',
+            inputTokens: 0,
+            totalInputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheCreationTokens: 0,
+            cost: 0,
+            modelCalls: 0,
+            available: false,
+          },
+        },
+      };
       callbacks.onError?.(error);
       emit('error', { error });
       callbacks.onDone?.(turn);
