@@ -133,6 +133,12 @@ export class Session {
     const allowThinking = merged.thinking === true || process.env.BARK_THINKING === '1';
     const start = Date.now();
 
+    // Install the controller before any asynchronous setup (tool/skill scans).
+    // Otherwise an abort issued immediately after send() can arrive while
+    // _abortCtrl is still null and be lost.
+    this._abortCtrl = new AbortController();
+    this.vault.running = this._abortCtrl;
+
     process.env.BARK_PROVIDER = provider;
     if (merged.apiKey && merged.apiKeyEnv) process.env[merged.apiKeyEnv] = merged.apiKey;
     if (baseUrl && (merged.baseUrlEnv || merged.endpointEnv)) process.env[merged.baseUrlEnv || merged.endpointEnv] = baseUrl;
@@ -211,9 +217,6 @@ export class Session {
         emit('tool_result', { result });
       }
     };
-
-    this._abortCtrl = new AbortController();
-    this.vault.running = this._abortCtrl;
 
     try {
       const providerRunner = resolveProvider(provider).runner;

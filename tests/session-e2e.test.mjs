@@ -152,3 +152,19 @@ test('Session.abort interrupts an in-flight provider without surfacing an error'
   assert.ok(Date.now() - startedAt < 1_000);
   client.destroy();
 });
+
+test('Session.abort is not lost during asynchronous send setup', async () => {
+  registerProvider('mock-early-abort', 'Mock Early Abort', async (_cfg, signal) => (
+    new TurnSummary({ ok: !signal.aborted, fault: signal.aborted ? 'aborted' : '' })
+  ));
+
+  const client = new BarkClient({ provider: 'mock-early-abort', builtinTools: false });
+  const session = client.session({ cwd: process.cwd(), sessionId: 'mock-early-abort-session' });
+  const pending = session.send('abort synchronously');
+  session.abort();
+  const result = await pending;
+
+  assert.equal(result.aborted, true);
+  assert.equal(result.fault, 'aborted');
+  client.destroy();
+});
