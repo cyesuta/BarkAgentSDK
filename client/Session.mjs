@@ -281,11 +281,12 @@ export class Session {
       emit('done', { stats: turn });
       return turn;
     } catch (error) {
+      const aborted = this._abortCtrl?.signal.aborted === true || error?.name === 'AbortError';
       const turn = {
         ok: false,
         success: false,
-        aborted: false,
-        fault: error.message,
+        aborted,
+        fault: aborted ? 'aborted' : error.message,
         durationMs: Date.now() - start,
         sessionId: this.id,
         numTurns: 0,
@@ -304,8 +305,10 @@ export class Session {
           },
         },
       };
-      callbacks.onError?.(error);
-      emit('error', { error });
+      if (!aborted) {
+        callbacks.onError?.(error);
+        emit('error', { error });
+      }
       callbacks.onDone?.(turn);
       emit('done', { stats: turn });
       return turn;

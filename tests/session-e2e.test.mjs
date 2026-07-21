@@ -121,3 +121,34 @@ test('Session usage is scoped to each send and never accumulates across sends', 
 
   client.destroy();
 });
+
+test('Session.abort interrupts an in-flight provider without surfacing an error', async () => {
+  registerProvider('mock-abort', 'Mock Abort', async (_cfg, signal) => {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, 10_000);
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new DOMException('The operation was aborted', 'AbortError'));
+      }, { once: true });
+    });
+    return new TurnSummary({ ok: true });
+  });
+
+  const client = new BarkClient({ provider: 'mock-abort', builtinTools: false });
+  const session = client.session({ cwd: process.cwd(), sessionId: 'mock-abort-session' });
+  const errors = [];
+  const startedAt = Date.now();
+  const pending = session.send('wait until aborted', {
+    onError: error => errors.push(error),
+  });
+
+  setTimeout(() => session.abort(), 20);
+  const result = await pending;
+
+  assert.equal(result.ok, false);
+  assert.equal(result.aborted, true);
+  assert.equal(result.fault, 'aborted');
+  assert.deepEqual(errors, []);
+  assert.ok(Date.now() - startedAt < 1_000);
+  client.destroy();
+});
