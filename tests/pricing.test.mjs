@@ -7,7 +7,7 @@ test('computeCharge returns zero for unknown provider/model', () => {
 });
 
 test('computeCharge returns a non-negative number for known provider', () => {
-  const cost = computeCharge('deepseek', 'deepseek-chat', 1000, 1000, 0);
+  const cost = computeCharge('deepseek', 'deepseek-v4-flash', 1000, 1000, 0);
   assert.equal(typeof cost, 'number');
   assert.equal(cost >= 0, true);
 });

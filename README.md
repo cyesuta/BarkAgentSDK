@@ -7,7 +7,7 @@ import { BarkClient } from '@cyesuta/bark-agent-sdk';
 
 const client = new BarkClient({
   provider: 'deepseek',
-  model: 'deepseek-chat',
+  model: 'deepseek-v4-flash',
   apiKey: process.env.DEEPSEEK_API_KEY,
 });
 

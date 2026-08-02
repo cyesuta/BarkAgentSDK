@@ -27,7 +27,7 @@ export async function runDeepseek(cfg, signal, onEvent, messages, tools) {
   const baseUrl = process.env.DEEPSEEK_BASE_URL || DEFAULT_ENDPOINT;
 
   const body = {
-    model: cfg.variant || "deepseek-chat",
+    model: cfg.variant || "deepseek-v4-flash",
     messages,
     stream: true,
     stream_options: { include_usage: true },
@@ -37,7 +37,7 @@ export async function runDeepseek(cfg, signal, onEvent, messages, tools) {
     body.tool_choice = "auto";
   }
   // Enable DeepSeek thinking mode when the user turned on the thinking
-  // toggle.  Without this, deepseek-chat V3 may still output reasoning
+  // toggle. DeepSeek V4 Flash supports both thinking and non-thinking
   // wrapped in <think> tags inside `content` rather than using the
   // dedicated `reasoning_content` field — parseOpenAIStream handles both
   // patterns, but the dedicated field is cleaner.

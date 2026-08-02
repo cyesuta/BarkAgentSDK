@@ -2,7 +2,7 @@ import { BarkClient } from '../index.mjs';
 
 const client = new BarkClient({
   provider: process.env.BARK_PROVIDER || 'deepseek',
-  model: process.env.BARK_MODEL || 'deepseek-chat',
+  model: process.env.BARK_MODEL || 'deepseek-v4-flash',
   apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
