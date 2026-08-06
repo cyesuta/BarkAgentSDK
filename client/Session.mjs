@@ -70,6 +70,19 @@ function stripSystemMessages(messages) {
   return messages.filter((m) => m && m.role !== 'system');
 }
 
+function cloneHistoryMessages(messages) {
+  if (!Array.isArray(messages)) throw new TypeError('Session history must be an array');
+  return messages.map((message, index) => {
+    if (!message || typeof message !== 'object' || Array.isArray(message)) {
+      throw new TypeError(`Session history item ${index} must be an object`);
+    }
+    if (!['user', 'assistant', 'tool'].includes(message.role)) {
+      throw new TypeError(`Session history item ${index} has unsupported role: ${message.role}`);
+    }
+    return structuredClone(message);
+  });
+}
+
 function toPictures(images) {
   const pictures = {};
   for (const img of Array.isArray(images) ? images : []) {
@@ -107,6 +120,18 @@ export class Session {
 
   getHistory() {
     return this.vault.messages.map((m) => structuredClone(m));
+  }
+
+  /**
+   * Seed a newly-created session with structured conversation history.
+   * Existing history is never overwritten: callers must reset explicitly
+   * before importing a different transcript.
+   */
+  hydrateHistory(messages) {
+    if (this.vault.running) throw new Error('Cannot hydrate history while a turn is running');
+    if (this.vault.messages.length > 0) throw new Error('Cannot hydrate a non-empty session');
+    this.vault.messages = cloneHistoryMessages(messages);
+    return this.getHistory();
   }
 
   abort() {

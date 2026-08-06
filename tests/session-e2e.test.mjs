@@ -122,6 +122,27 @@ test('Session usage is scoped to each send and never accumulates across sends', 
   client.destroy();
 });
 
+test('Session.hydrateHistory seeds only an empty session and clones input', async () => {
+  const client = new BarkClient({ provider: 'mock-usage-scope', builtinTools: false });
+  const session = client.session({ cwd: process.cwd(), sessionId: 'mock-hydrate-session' });
+  const source = [
+    { role: 'user', content: 'earlier question' },
+    { role: 'assistant', content: 'earlier answer' },
+  ];
+
+  assert.deepEqual(session.hydrateHistory(source), source);
+  source[0].content = 'mutated outside';
+  assert.equal(session.getHistory()[0].content, 'earlier question');
+  assert.throws(() => session.hydrateHistory([]), /non-empty session/);
+
+  await session.reset();
+  assert.throws(
+    () => session.hydrateHistory([{ role: 'system', content: 'not accepted' }]),
+    /unsupported role/,
+  );
+  client.destroy();
+});
+
 test('Session.abort interrupts an in-flight provider without surfacing an error', async () => {
   registerProvider('mock-abort', 'Mock Abort', async (_cfg, signal) => {
     await new Promise((resolve, reject) => {
