@@ -134,6 +134,13 @@ export class Session {
     return this.getHistory();
   }
 
+  /** Append trusted, structured catch-up turns while the session is idle. */
+  appendHistory(messages) {
+    if (this.vault.running) throw new Error('Cannot append history while a turn is running');
+    this.vault.messages.push(...cloneHistoryMessages(messages));
+    return this.getHistory();
+  }
+
   abort() {
     if (this._abortCtrl) this._abortCtrl.abort();
     if (this.vault.motor?.halt) {

@@ -135,6 +135,13 @@ test('Session.hydrateHistory seeds only an empty session and clones input', asyn
   assert.equal(session.getHistory()[0].content, 'earlier question');
   assert.throws(() => session.hydrateHistory([]), /non-empty session/);
 
+  session.appendHistory([{ role: 'user', content: 'catch-up question' }]);
+  assert.deepEqual(session.getHistory().map(message => message.content), [
+    'earlier question',
+    'earlier answer',
+    'catch-up question',
+  ]);
+
   await session.reset();
   assert.throws(
     () => session.hydrateHistory([{ role: 'system', content: 'not accepted' }]),
