@@ -3,6 +3,7 @@ import { runDeepseek } from '../providers/deepseek.mjs';
 import { runOpenAICompat } from '../providers/openai-compat.mjs';
 import { runGemini } from '../providers/gemini.mjs';
 import { runCodex } from '../providers/codex.mjs';
+import { runCustom } from '../providers/custom.mjs';
 
 let registered = false;
 
@@ -30,8 +31,7 @@ export function ensureDefaultProviders() {
     runOpenAICompat('minimax', cfg, sig, onEvt, msgs, tools));
   registerProvider('ollama', 'Ollama (Local)', (cfg, sig, onEvt, msgs, tools) =>
     runOpenAICompat('ollama', cfg, sig, onEvt, msgs, tools));
-  registerProvider('custom', 'Custom OpenAI-compatible', (cfg, sig, onEvt, msgs, tools) =>
-    runOpenAICompat('custom', cfg, sig, onEvt, msgs, tools));
+  registerProvider('custom', 'Custom OpenAI/Anthropic-compatible', runCustom);
 
   registered = true;
 }

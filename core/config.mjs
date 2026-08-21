@@ -22,6 +22,7 @@ export class BarkConfig {
    * @param {string} [src.apiKeyEnv]
    * @param {string} [src.endpoint]
    * @param {string} [src.endpointEnv]
+   * @param {'openai'|'anthropic'} [src.apiFormat]
    */
   constructor(src = {}) {
     this.guidance = src.guidance || "";
@@ -35,6 +36,7 @@ export class BarkConfig {
     this.apiKeyEnv = src.apiKeyEnv || "";
     this.endpoint = src.endpoint || "";
     this.endpointEnv = src.endpointEnv || "";
+    this.apiFormat = src.apiFormat || "openai";
 
     Object.freeze(this);
   }

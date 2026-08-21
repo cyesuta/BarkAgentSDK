@@ -15,9 +15,11 @@ function normalizeProvider(provider) {
   return String(provider || 'deepseek').trim().toLowerCase() || 'deepseek';
 }
 
-function normalizeBaseUrl(provider, baseUrl) {
+function normalizeBaseUrl(provider, baseUrl, apiFormat = 'openai') {
   let resolved = String(baseUrl || '');
-  if (resolved && provider !== 'gemini' && !resolved.includes('/chat/completions')) {
+  if (resolved && provider === 'custom' && apiFormat === 'anthropic') {
+    if (!/\/messages\/?(?:\?.*)?$/.test(resolved)) resolved = resolved.replace(/\/+$/, '') + '/v1/messages';
+  } else if (resolved && provider !== 'gemini' && !resolved.includes('/chat/completions')) {
     resolved = resolved.replace(/\/+$/, '') + '/chat/completions';
   }
   return resolved;
@@ -158,7 +160,8 @@ export class Session {
   async send(message, callbacks = {}) {
     const merged = { ...this._client.config, ...this.config, ...callbacks };
     const provider = normalizeProvider(merged.provider);
-    const baseUrl = normalizeBaseUrl(provider, merged.baseUrl || merged.endpoint || '');
+    const apiFormat = String(merged.apiFormat || 'openai').trim().toLowerCase();
+    const baseUrl = normalizeBaseUrl(provider, merged.baseUrl || merged.endpoint || '', apiFormat);
     const model = merged.model || '';
     const systemPrompt = merged.systemPrompt || merged.guidance || '';
     const cwd = merged.cwd || this.cwd || process.cwd();
@@ -227,6 +230,7 @@ export class Session {
       apiKeyEnv: merged.apiKeyEnv || '',
       endpoint: baseUrl,
       endpointEnv: merged.baseUrlEnv || merged.endpointEnv || '',
+      apiFormat,
     });
 
     const emit = (event, payload) => {

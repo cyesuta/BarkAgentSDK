@@ -10,7 +10,8 @@ import { BarkClient } from '@cyesuta/bark-agent-sdk';
 
 Common config fields:
 
-- `provider`: Provider alias such as `deepseek`, `kimi`, `qwen`, `glm`, `grok`, `doubao`, `gemini`, `openrouter`, `minimax`, `ollama`, `custom`, or `codex`. `custom` targets an OpenAI-compatible endpoint and requires an explicit `baseUrl`, `model`, and API key.
+- `provider`: Provider alias such as `deepseek`, `kimi`, `qwen`, `glm`, `grok`, `doubao`, `gemini`, `openrouter`, `minimax`, `ollama`, `custom`, or `codex`. `custom` targets an OpenAI- or Anthropic-compatible endpoint and requires an explicit `baseUrl`, `model`, and API key.
+- `apiFormat`: For `custom`, either `openai` (default) or `anthropic`.
 - `model`: Provider model name.
 - `apiKey`: Runtime API key override.
 - `apiKeyEnv`: Environment variable name to set from `apiKey`.
