@@ -71,7 +71,7 @@ test('custom Anthropic format converts messages, tools, stream and usage', async
   assert.equal(request.body.tools[0].input_schema.properties.path.type, 'string');
   assert.deepEqual(emitted, [['text', 'hello']]);
   assert.equal(result.ok, true);
-  assert.equal(result.tokensIn, 12);
+  assert.equal(result.tokensIn, 17);
   assert.equal(result.tokensCache, 5);
   assert.equal(result.tokensOut, 7);
   assert.equal(messages.at(-1).tool_calls[0].function.arguments, '{"path":"a.txt"}');

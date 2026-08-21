@@ -47,8 +47,8 @@ async function parseStream(resp, onEvent, messages) {
     try { event = JSON.parse(payload); } catch { return; }
     if (event.type === 'message_start') {
       const usage = event.message?.usage || {};
-      tokensIn = usage.input_tokens || tokensIn;
-      tokensCache = usage.cache_read_input_tokens || tokensCache;
+      tokensCache = usage.cache_read_input_tokens || 0;
+      tokensIn = (usage.input_tokens || 0) + tokensCache + (usage.cache_creation_input_tokens || 0);
     } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
       calls.set(event.index, { id: event.content_block.id, type: 'function', function: { name: event.content_block.name, arguments: '' } });
     } else if (event.type === 'content_block_delta') {
