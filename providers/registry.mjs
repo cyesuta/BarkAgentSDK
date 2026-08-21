@@ -76,6 +76,7 @@ export const PROVIDER_ENV_MAP = {
   openrouter: { keys: ["OPENROUTER_API_KEY"],                           bases: ["OPENROUTER_BASE_URL"] },
   minimax: { keys: ["MINIMAX_API_KEY"],                                 bases: ["MINIMAX_BASE_URL"] },
   ollama:  { keys: ["OLLAMA_API_KEY"],                                  bases: ["OLLAMA_BASE_URL"] },
+  custom:  { keys: ["BARK_CUSTOM_API_KEY"],                             bases: ["BARK_CUSTOM_BASE_URL"] },
 };
 
 /**

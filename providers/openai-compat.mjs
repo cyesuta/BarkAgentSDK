@@ -18,6 +18,7 @@ const OPENAI_DEFAULTS = {
   openrouter: { endpoint: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/auto" },
   minimax: { endpoint: "https://api.minimax.io/v1/chat/completions", model: "MiniMax-M2.7" },
   ollama: { endpoint: "http://localhost:11434/v1/chat/completions",     model: "gemma4:e2b" },
+  custom: { endpoint: "", model: "" },
 };
 
 const ENV_KEY_MAP = {
@@ -30,6 +31,7 @@ const ENV_KEY_MAP = {
   openrouter: ["OPENROUTER_API_KEY"],
   minimax: ["MINIMAX_API_KEY"],
   ollama: ["OLLAMA_API_KEY"],
+  custom: ["BARK_CUSTOM_API_KEY"],
 };
 
 const ENV_ENDPOINT_MAP = {
@@ -42,6 +44,7 @@ const ENV_ENDPOINT_MAP = {
   openrouter: "OPENROUTER_BASE_URL",
   minimax: "MINIMAX_BASE_URL",
   ollama: "OLLAMA_BASE_URL",
+  custom: "BARK_CUSTOM_BASE_URL",
 };
 
 /**
@@ -74,9 +77,16 @@ export async function runOpenAICompat(alias, cfg, signal, onEvent, messages, too
   // Resolve endpoint
   const envEndpoint = process.env[ENV_ENDPOINT_MAP[alias]];
   const baseUrl = cfg.endpoint || envEndpoint || defaults.endpoint;
+  const model = cfg.variant || defaults.model;
+  if (!baseUrl) {
+    return new TurnSummary({ ok: false, fault: `${alias} base URL is required` });
+  }
+  if (!model) {
+    return new TurnSummary({ ok: false, fault: `${alias} model name is required` });
+  }
 
   const body = {
-    model: cfg.variant || defaults.model,
+    model,
     messages,
     stream: true,
     stream_options: { include_usage: true },

@@ -30,6 +30,8 @@ export function ensureDefaultProviders() {
     runOpenAICompat('minimax', cfg, sig, onEvt, msgs, tools));
   registerProvider('ollama', 'Ollama (Local)', (cfg, sig, onEvt, msgs, tools) =>
     runOpenAICompat('ollama', cfg, sig, onEvt, msgs, tools));
+  registerProvider('custom', 'Custom OpenAI-compatible', (cfg, sig, onEvt, msgs, tools) =>
+    runOpenAICompat('custom', cfg, sig, onEvt, msgs, tools));
 
   registered = true;
 }
