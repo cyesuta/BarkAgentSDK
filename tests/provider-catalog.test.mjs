@@ -9,6 +9,9 @@ test('OpenRouter catalog includes Stealth OX Alpha', () => {
     'nvidia/nemotron-3.5-lightning:free',
     'z-ai/glm-5.2:free',
     'google/gemma-4-31b-it:free',
+    'cohere/north-mini-code:free',
+    'poolside/laguna-s-2.1:free',
+    'poolside/laguna-xs-2.1:free',
   ]) assert.ok(OPENROUTER_MODELS.some((model) => model.id === id));
   assert.equal(listProviderModels('openrouter'), OPENROUTER_MODELS);
   assert.deepEqual(listProviderModels('unknown'), []);

@@ -47,6 +47,27 @@ export const OPENROUTER_MODELS = Object.freeze([
     supportsVision: true,
     supportsThinking: true,
   }),
+  Object.freeze({
+    id: "cohere/north-mini-code:free",
+    displayName: "Cohere North Mini Code (free)",
+    contextWindow: 256_000,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
+  Object.freeze({
+    id: "poolside/laguna-s-2.1:free",
+    displayName: "Poolside Laguna S 2.1 (free)",
+    contextWindow: 262_144,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
+  Object.freeze({
+    id: "poolside/laguna-xs-2.1:free",
+    displayName: "Poolside Laguna XS 2.1 (free)",
+    contextWindow: 262_144,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
 ]);
 
 /**
