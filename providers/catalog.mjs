@@ -19,6 +19,34 @@ export const OPENROUTER_MODELS = Object.freeze([
     supportsVision: true,
     supportsThinking: true,
   }),
+  Object.freeze({
+    id: "nvidia/nemotron-3-ultra-550b-a55b:free",
+    displayName: "NVIDIA Nemotron 3 Ultra (free)",
+    contextWindow: 1_000_000,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
+  Object.freeze({
+    id: "nvidia/nemotron-3.5-lightning:free",
+    displayName: "NVIDIA Nemotron 3.5 Lightning (free)",
+    contextWindow: 1_000_000,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
+  Object.freeze({
+    id: "z-ai/glm-5.2:free",
+    displayName: "Z.ai GLM 5.2 (free)",
+    contextWindow: 262_144,
+    supportsVision: false,
+    supportsThinking: true,
+  }),
+  Object.freeze({
+    id: "google/gemma-4-31b-it:free",
+    displayName: "Google Gemma 4 31B (free)",
+    contextWindow: 262_144,
+    supportsVision: true,
+    supportsThinking: true,
+  }),
 ]);
 
 /**
