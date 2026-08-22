@@ -14,10 +14,10 @@ export const OPENROUTER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "stealth/ox-alpha",
-    displayName: "Stealth OX Alpha",
-    contextWindow: null,
-    supportsVision: false,
-    supportsThinking: false,
+    displayName: "Ox Alpha",
+    contextWindow: 1_048_576,
+    supportsVision: true,
+    supportsThinking: true,
   }),
 ]);
 
