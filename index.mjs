@@ -7,3 +7,4 @@ export { scanLocalActions, scanDispatcherTasks } from './tools/scanner.mjs';
 export { capabilityScanner, injectCapabilities, DEFAULT_SKILL_DIRS } from './skills/scanner.mjs';
 export { pricingTable, computeCharge } from './pricing/table.mjs';
 export { registerProvider, resolveProvider, listProviders, hasProvider } from './providers/registry.mjs';
+export { OPENROUTER_MODELS, listProviderModels } from './providers/catalog.mjs';

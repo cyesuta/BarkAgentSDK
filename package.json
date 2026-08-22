@@ -1,6 +1,6 @@
 {
   "name": "@cyesuta/bark-agent-sdk",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "type": "module",
   "description": "Programmatic Bark agent SDK extracted from BarkIDE.",
   "main": "index.mjs",
