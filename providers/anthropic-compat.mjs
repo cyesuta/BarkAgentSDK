@@ -95,7 +95,9 @@ export async function runAnthropicCompat(cfg, signal, onEvent, messages, tools =
   const body = { model: cfg.variant, max_tokens: 8192, messages: converted.messages, stream: true };
   if (converted.system) body.system = converted.system;
   if (tools.length) body.tools = anthropicTools(tools);
-  if (cfg.allowThinking) body.thinking = { type: 'enabled', budget_tokens: 4096 };
+  body.thinking = cfg.allowThinking
+    ? { type: 'enabled', budget_tokens: 4096 }
+    : { type: 'disabled' };
   try {
     const resp = await fetch(endpoint, {
       method: 'POST', signal,

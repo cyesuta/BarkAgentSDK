@@ -165,7 +165,11 @@ export class Session {
     const model = merged.model || '';
     const systemPrompt = merged.systemPrompt || merged.guidance || '';
     const cwd = merged.cwd || this.cwd || process.cwd();
-    const allowThinking = merged.thinking === true || process.env.BARK_THINKING === '1';
+    // An explicit per-turn value from BarkIDE must win over the environment.
+    // Keep BARK_THINKING as a fallback only for callers that omit the option.
+    const allowThinking = typeof merged.thinking === 'boolean'
+      ? merged.thinking
+      : process.env.BARK_THINKING === '1';
     const start = Date.now();
 
     // Install the controller before any asynchronous setup (tool/skill scans).

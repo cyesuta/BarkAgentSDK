@@ -35,6 +35,27 @@ test('custom provider requires an explicit model', async () => {
   assert.match(result.fault, /model name is required/);
 });
 
+test('custom OpenAI format sends the explicit thinking state', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const bodies = [];
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response('data: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  };
+  for (const allowThinking of [false, true]) {
+    const result = await runCustom(
+      new BarkConfig({ channel: 'custom', apiFormat: 'openai', endpoint: 'https://example.invalid/v1/chat/completions', variant: 'custom-model', apiKey: 'test-only', allowThinking }),
+      new AbortController().signal,
+      () => {},
+      [{ role: 'user', content: 'hello' }],
+      [],
+    );
+    assert.equal(result.ok, true);
+  }
+  assert.deepEqual(bodies.map((body) => body.enable_thinking), [false, true]);
+});
+
 test('custom Anthropic format converts messages, tools, stream and usage', async (t) => {
   const originalFetch = globalThis.fetch;
   let request;
@@ -75,6 +96,30 @@ test('custom Anthropic format converts messages, tools, stream and usage', async
   assert.equal(result.tokensCache, 5);
   assert.equal(result.tokensOut, 7);
   assert.equal(messages.at(-1).tool_calls[0].function.arguments, '{"path":"a.txt"}');
+});
+
+test('custom Anthropic format sends the explicit thinking state', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const bodies = [];
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response('data: {"type":"message_stop"}\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  };
+  for (const allowThinking of [false, true]) {
+    const result = await runCustom(
+      new BarkConfig({ channel: 'custom', apiFormat: 'anthropic', endpoint: 'https://example.invalid/v1/messages', variant: 'custom-model', apiKey: 'test-only', allowThinking }),
+      new AbortController().signal,
+      () => {},
+      [{ role: 'user', content: 'hello' }],
+      [],
+    );
+    assert.equal(result.ok, true);
+  }
+  assert.deepEqual(bodies.map((body) => body.thinking), [
+    { type: 'disabled' },
+    { type: 'enabled', budget_tokens: 4096 },
+  ]);
 });
 
 test('custom rejects an unsupported API format', async () => {

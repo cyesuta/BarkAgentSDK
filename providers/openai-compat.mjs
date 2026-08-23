@@ -95,6 +95,12 @@ export async function runOpenAICompat(alias, cfg, signal, onEvent, messages, too
     body.tools = tools;
     body.tool_choice = "auto";
   }
+  // Custom OpenAI-compatible endpoints (Qwen, GLM, DeepSeek-compatible
+  // gateways, etc.) commonly require an explicit boolean to disable their
+  // model's default reasoning mode. Preserve both states from the UI toggle.
+  if (alias === "custom") {
+    body.enable_thinking = cfg.allowThinking;
+  }
   if (alias === "minimax" && cfg.allowThinking) {
     body.reasoning_split = true;
   }
