@@ -4,6 +4,7 @@ import { runOpenAICompat } from '../providers/openai-compat.mjs';
 import { runGemini } from '../providers/gemini.mjs';
 import { runCodex } from '../providers/codex.mjs';
 import { runCustom } from '../providers/custom.mjs';
+import { runOllama } from '../providers/ollama.mjs';
 
 let registered = false;
 
@@ -29,8 +30,7 @@ export function ensureDefaultProviders() {
     runOpenAICompat('openrouter', cfg, sig, onEvt, msgs, tools));
   registerProvider('minimax', 'MiniMax', (cfg, sig, onEvt, msgs, tools) =>
     runOpenAICompat('minimax', cfg, sig, onEvt, msgs, tools));
-  registerProvider('ollama', 'Ollama (Local)', (cfg, sig, onEvt, msgs, tools) =>
-    runOpenAICompat('ollama', cfg, sig, onEvt, msgs, tools));
+  registerProvider('ollama', 'Ollama (Local)', runOllama);
   registerProvider('custom', 'Custom OpenAI/Anthropic-compatible', runCustom);
 
   registered = true;
