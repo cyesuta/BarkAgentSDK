@@ -95,11 +95,24 @@ export async function runOpenAICompat(alias, cfg, signal, onEvent, messages, too
     body.tools = tools;
     body.tool_choice = "auto";
   }
-  // Custom OpenAI-compatible endpoints (Qwen, GLM, DeepSeek-compatible
-  // gateways, etc.) commonly require an explicit boolean to disable their
-  // model's default reasoning mode. Preserve both states from the UI toggle.
+  // OpenAI-compatible gateways do not agree on a reasoning switch. Keep the
+  // response protocol (OpenAI) separate from the provider-specific request
+  // field and always preserve an explicit false state.
   if (alias === "custom") {
-    body.enable_thinking = cfg.allowThinking;
+    switch (cfg.thinkingParam) {
+      case "think":
+        body.think = cfg.allowThinking;
+        break;
+      case "reasoning_effort":
+        body.reasoning_effort = cfg.allowThinking ? "high" : "none";
+        break;
+      case "none":
+        break;
+      case "enable_thinking":
+      default:
+        body.enable_thinking = cfg.allowThinking;
+        break;
+    }
   }
   if (alias === "minimax" && cfg.allowThinking) {
     body.reasoning_split = true;

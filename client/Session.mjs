@@ -161,6 +161,7 @@ export class Session {
     const merged = { ...this._client.config, ...this.config, ...callbacks };
     const provider = normalizeProvider(merged.provider);
     const apiFormat = String(merged.apiFormat || 'openai').trim().toLowerCase();
+    const thinkingParam = String(merged.thinkingParam || 'enable_thinking').trim().toLowerCase();
     const baseUrl = normalizeBaseUrl(provider, merged.baseUrl || merged.endpoint || '', apiFormat);
     const model = merged.model || '';
     const systemPrompt = merged.systemPrompt || merged.guidance || '';
@@ -235,6 +236,7 @@ export class Session {
       endpoint: baseUrl,
       endpointEnv: merged.baseUrlEnv || merged.endpointEnv || '',
       apiFormat,
+      thinkingParam,
     });
 
     const emit = (event, payload) => {

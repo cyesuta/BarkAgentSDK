@@ -56,6 +56,39 @@ test('custom OpenAI format sends the explicit thinking state', async (t) => {
   assert.deepEqual(bodies.map((body) => body.enable_thinking), [false, true]);
 });
 
+test('custom OpenAI format supports provider-specific thinking parameters', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const bodies = [];
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response('data: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  };
+  for (const [thinkingParam, allowThinking] of [
+    ['think', false],
+    ['think', true],
+    ['reasoning_effort', false],
+    ['reasoning_effort', true],
+    ['none', true],
+  ]) {
+    const result = await runCustom(
+      new BarkConfig({ channel: 'custom', apiFormat: 'openai', endpoint: 'https://example.invalid/v1/chat/completions', variant: 'custom-model', apiKey: 'test-only', thinkingParam, allowThinking }),
+      new AbortController().signal,
+      () => {},
+      [{ role: 'user', content: 'hello' }],
+      [],
+    );
+    assert.equal(result.ok, true);
+  }
+  assert.equal(bodies[0].think, false);
+  assert.equal(bodies[1].think, true);
+  assert.equal(bodies[2].reasoning_effort, 'none');
+  assert.equal(bodies[3].reasoning_effort, 'high');
+  assert.equal('think' in bodies[4], false);
+  assert.equal('enable_thinking' in bodies[4], false);
+  assert.equal('reasoning_effort' in bodies[4], false);
+});
+
 test('custom Anthropic format converts messages, tools, stream and usage', async (t) => {
   const originalFetch = globalThis.fetch;
   let request;
