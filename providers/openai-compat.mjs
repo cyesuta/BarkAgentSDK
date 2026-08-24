@@ -130,19 +130,50 @@ export async function runOpenAICompat(alias, cfg, signal, onEvent, messages, too
       headers["X-Title"] = "BarkIDE";
     }
 
-    const resp = await fetch(baseUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal,
-    });
+    const request = async (requestBody) => {
+      const beforeMessages = Array.isArray(messages) ? messages.length : 0;
+      const resp = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        return new TurnSummary({ ok: false, fault: `${alias} HTTP ${resp.status}: ${errText.slice(0, 300)}` });
+      }
+      const result = await parseOpenAIStream(resp, onEvent, messages);
+      const appended = Array.isArray(messages) ? messages.slice(beforeMessages) : [];
+      const producedContent = appended.some(message =>
+        message?.role === "assistant"
+        && (String(message.content || "").trim() || (Array.isArray(message.tool_calls) && message.tool_calls.length > 0)));
+      return { result, producedContent };
+    };
 
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      return new TurnSummary({ ok: false, fault: `${alias} HTTP ${resp.status}: ${errText.slice(0, 300)}` });
+    let attempt = await request(body);
+    if (attempt instanceof TurnSummary) return attempt;
+
+    // Some OpenRouter models accept the tool-bearing request but return an
+    // empty successful stream. Retry exactly once without tools; no partial
+    // content or tool call has been emitted, so this cannot duplicate work.
+    if (!attempt.producedContent && alias === "openrouter" && body.tools?.length) {
+      const fallbackBody = { ...body };
+      delete fallbackBody.tools;
+      delete fallbackBody.tool_choice;
+      attempt = await request(fallbackBody);
+      if (attempt instanceof TurnSummary) return attempt;
     }
 
-    return await parseOpenAIStream(resp, onEvent, messages);
+    if (!attempt.producedContent && alias === "openrouter") {
+      return new TurnSummary({
+        ok: false,
+        fault: `${alias} EMPTY_RESPONSE: provider returned no text, reasoning output, or tool call`,
+        tokensIn: attempt.result.tokensIn,
+        tokensOut: attempt.result.tokensOut,
+        tokensCache: attempt.result.tokensCache,
+      });
+    }
+    return attempt.result;
   } catch (err) {
     if (err.name === "AbortError") {
       return new TurnSummary({ ok: false, fault: "aborted" });
