@@ -23,13 +23,8 @@ async function ensureCodex() {
   if (_codexProcess && !_codexProcess.killed) return;
   _codexPending = new Map();
 
-  const cmd = process.env.BARK_SERVER_CMD ||
-              (process.platform === "win32"
-                ? "codex.cmd app-server --listen stdio://"
-                : "codex app-server --listen stdio://");
-
-  const parts = cmd.split(/\s+/);
-  _codexProcess = spawn(parts[0], parts.slice(1), {
+  const { executable, args } = resolveCodexSpawn(process.env, process.platform);
+  _codexProcess = spawn(executable, args, {
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env },
     windowsHide: true,
@@ -68,6 +63,32 @@ async function ensureCodex() {
   if (!initResult || initResult.error) {
     throw new Error(`Codex init failed: ${JSON.stringify(initResult?.error)}`);
   }
+}
+
+export function resolveCodexSpawn(env = process.env, platform = process.platform) {
+  const executable = env.BARK_SERVER_EXECUTABLE?.trim();
+  if (executable) {
+    let args = ["app-server", "--listen", "stdio://"];
+    if (env.BARK_SERVER_ARGS_JSON) {
+      const parsed = JSON.parse(env.BARK_SERVER_ARGS_JSON);
+      if (!Array.isArray(parsed) || parsed.some((arg) => typeof arg !== "string")) {
+        throw new Error("BARK_SERVER_ARGS_JSON must be a JSON string array");
+      }
+      args = parsed;
+    }
+    return { executable, args };
+  }
+
+  const command = env.BARK_SERVER_CMD?.trim();
+  if (command) {
+    const parts = command.split(/\s+/);
+    return { executable: parts[0], args: parts.slice(1) };
+  }
+
+  return {
+    executable: platform === "win32" ? "codex.cmd" : "codex",
+    args: ["app-server", "--listen", "stdio://"],
+  };
 }
 
 /**
