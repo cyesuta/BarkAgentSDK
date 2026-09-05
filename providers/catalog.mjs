@@ -4,6 +4,19 @@
  * Runners intentionally accept any valid model ID. This catalog only exposes
  * known, user-friendly choices; callers can still supply another variant.
  */
+export const CODEX_MODELS = Object.freeze([
+  Object.freeze({
+    id: "gpt-6-astra",
+    displayName: "GPT-6 Astra",
+    contextWindow: 1_050_000,
+    maxInputTokens: 922_000,
+    maxOutputTokens: 128_000,
+    supportsVision: true,
+    supportsThinking: true,
+    reasoningEfforts: Object.freeze(["low", "medium", "high", "xhigh", "max"]),
+  }),
+]);
+
 export const OPENROUTER_MODELS = Object.freeze([
   Object.freeze({
     id: "openrouter/auto",
@@ -75,5 +88,7 @@ export const OPENROUTER_MODELS = Object.freeze([
  * Unknown aliases return an empty list so hosts may supply their own options.
  */
 export function listProviderModels(alias) {
-  return alias === "openrouter" ? OPENROUTER_MODELS : [];
+  if (alias === "codex") return CODEX_MODELS;
+  if (alias === "openrouter") return OPENROUTER_MODELS;
+  return [];
 }
