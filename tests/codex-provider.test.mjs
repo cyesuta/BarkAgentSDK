@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveCodexSpawn } from '../providers/codex.mjs';
+import {
+  buildThreadStartParams,
+  buildTurnStartParams,
+  resolveCodexSpawn,
+} from '../providers/codex.mjs';
 
 test('Codex spawn supports an executable path containing spaces', () => {
   assert.deepEqual(resolveCodexSpawn({
@@ -24,4 +28,19 @@ test('Codex spawn rejects malformed argument JSON', () => {
     BARK_SERVER_EXECUTABLE: 'codex',
     BARK_SERVER_ARGS_JSON: '{"not":"an array"}',
   }), /JSON string array/);
+});
+
+test('Codex app-server requests use the current thread and turn schemas', () => {
+  assert.deepEqual(buildThreadStartParams({ workspace: 'C:\\work', guidance: 'Be useful' }), {
+    cwd: 'C:\\work',
+    skipGitRepoCheck: true,
+    sandbox: { 'workspace-write': null },
+    approvalPolicy: 'never',
+    developerInstructions: 'Be useful',
+  });
+  assert.deepEqual(buildTurnStartParams('thread-1', 'hello', { variant: 'gpt-5.5' }), {
+    threadId: 'thread-1',
+    input: [{ type: 'text', text: 'hello' }],
+    model: 'gpt-5.5',
+  });
 });

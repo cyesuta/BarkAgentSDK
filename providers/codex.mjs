@@ -1,69 +1,12 @@
-/**
- * BarkSDK — Codex provider (ChatGPT OAuth)
- *
- * Spawns `codex.cmd app-server --listen stdio://` as a subprocess and
- * communicates via JSON-RPC 2.0 over its stdin/stdout.
- *
- * This is the ONLY provider that requires an external binary (codex).
- * All other providers use plain HTTP fetch().
- */
-
+/** Codex provider backed by the Codex app-server JSON-RPC protocol. */
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { TurnSummary } from "../protocol/packets.mjs";
 
-let _codexProcess = null;
-let _codexSequence = 0;
-let _codexPending = new Map();
-
-/**
- * Lazily start (or reuse) a codex subprocess.
- */
-async function ensureCodex() {
-  if (_codexProcess && !_codexProcess.killed) return;
-  _codexPending = new Map();
-
-  const { executable, args } = resolveCodexSpawn(process.env, process.platform);
-  _codexProcess = spawn(executable, args, {
-    stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env },
-    windowsHide: true,
-  });
-
-  const rl = createInterface({ input: _codexProcess.stdout });
-  rl.on("line", (line) => {
-    let msg;
-    try { msg = JSON.parse(line); } catch { return; }
-    const { id } = msg;
-    if (id != null && _codexPending.has(id)) {
-      const { resolve } = _codexPending.get(id);
-      _codexPending.delete(id);
-      resolve(msg);
-    }
-  });
-
-  _codexProcess.stderr.on("data", (d) => {
-    process.stderr.write(`[codex] ${d}`);
-  });
-
-  _codexProcess.on("exit", () => {
-    _codexProcess = null;
-    // Reject all pending
-    for (const [id, { reject }] of _codexPending) {
-      reject(new Error("Codex process exited"));
-    }
-    _codexPending.clear();
-  });
-
-  // Await initialize handshake
-  const initResult = await jsonRpcCall("initialize", {
-    protocolVersion: "2025-04-01",
-    clientInfo: { name: "bark-sdk", version: "0.1.0" },
-  });
-  if (!initResult || initResult.error) {
-    throw new Error(`Codex init failed: ${JSON.stringify(initResult?.error)}`);
-  }
-}
+let codexProcess = null;
+let sequence = 0;
+let pending = new Map();
+let turnWaiters = new Map();
 
 export function resolveCodexSpawn(env = process.env, platform = process.platform) {
   const executable = env.BARK_SERVER_EXECUTABLE?.trim();
@@ -78,144 +21,201 @@ export function resolveCodexSpawn(env = process.env, platform = process.platform
     }
     return { executable, args };
   }
-
   const command = env.BARK_SERVER_CMD?.trim();
   if (command) {
     const parts = command.split(/\s+/);
     return { executable: parts[0], args: parts.slice(1) };
   }
-
   return {
     executable: platform === "win32" ? "codex.cmd" : "codex",
     args: ["app-server", "--listen", "stdio://"],
   };
 }
 
-/**
- * Make a JSON-RPC 2.0 call to the codex subprocess.
- */
-function jsonRpcCall(method, params) {
-  return new Promise((resolve, reject) => {
-    if (!_codexProcess || _codexProcess.killed) {
-      return reject(new Error("Codex process not running"));
-    }
-    const id = ++_codexSequence;
-    _codexPending.set(id, { resolve, reject });
-    const request = { jsonrpc: "2.0", id, method, params };
-    _codexProcess.stdin.write(JSON.stringify(request) + "\n");
+export function buildThreadStartParams(cfg) {
+  return {
+    cwd: cfg.workspace || process.cwd(),
+    skipGitRepoCheck: true,
+    sandbox: { "workspace-write": null },
+    approvalPolicy: "never",
+    developerInstructions: cfg.guidance || undefined,
+  };
+}
 
-    // Timeout
-    setTimeout(() => {
-      if (_codexPending.has(id)) {
-        _codexPending.delete(id);
-        reject(new Error(`Codex RPC timeout: ${method}`));
-      }
-    }, 30000);
+export function buildTurnStartParams(threadId, prompt, cfg = {}) {
+  const params = {
+    threadId,
+    input: [{ type: "text", text: String(prompt || "") }],
+  };
+  if (cfg.variant) params.model = cfg.variant;
+  return params;
+}
+
+function writeFrame(frame) {
+  if (!codexProcess || codexProcess.killed || !codexProcess.stdin?.writable) {
+    throw new Error("Codex process not running");
+  }
+  codexProcess.stdin.write(`${JSON.stringify(frame)}\n`);
+}
+
+function notify(method, params = {}) {
+  writeFrame({ jsonrpc: "2.0", method, params });
+}
+
+function rpcCall(method, params) {
+  return new Promise((resolve, reject) => {
+    const id = ++sequence;
+    const timeout = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`Codex RPC timeout: ${method}`));
+    }, 30_000);
+    pending.set(id, {
+      resolve: (value) => { clearTimeout(timeout); resolve(value); },
+      reject: (error) => { clearTimeout(timeout); reject(error); },
+    });
+    try {
+      writeFrame({ jsonrpc: "2.0", id, method, params });
+    } catch (error) {
+      clearTimeout(timeout);
+      pending.delete(id);
+      reject(error);
+    }
   });
 }
 
-/**
- * Run the Codex (codex) provider.
- * @param {import("../core/config.mjs").BarkConfig} cfg
- * @param {AbortSignal} signal
- * @param {function} onEvent
- * @param {Array} messages
- * @returns {Promise<TurnSummary>}
- */
-export async function runCodex(cfg, signal, onEvent, messages) {
-  try {
-    await ensureCodex();
-  } catch (err) {
-    return new TurnSummary({ ok: false, fault: `Codex start failed: ${err.message}` });
-  }
+function respondToServerRequest(message) {
+  if (!message.method || message.id == null) return false;
+  const result = message.method.endsWith("/requestApproval")
+    ? { decision: "decline" }
+    : { success: false, contentItems: [{ type: "inputText", text: "Unsupported host request" }] };
+  writeFrame({ jsonrpc: "2.0", id: message.id, result });
+  return true;
+}
 
-  const startTime = Date.now();
-  let tokensIn = 0, tokensOut = 0;
+function routeNotification(method, params = {}) {
+  const turnId = params.turnId || params.turn?.id;
+  if (turnId) turnWaiters.get(turnId)?.(method, params);
+}
 
-  try {
-    // Start a thread with the user message
-    const lastMsg = messages[messages.length - 1] || {};
-    const userText = typeof lastMsg.content === "string" ? lastMsg.content : "";
-
-    const threadResult = await jsonRpcCall("thread/start", {
-      threadId: `bark-${cfg.workspace || Date.now()}`,
-      instruction: userText,
-      model: cfg.variant || undefined,
-      systemPrompt: cfg.guidance || undefined,
-      metadata: { source: "bark-sdk" },
-    });
-
-    if (threadResult.error) {
-      return new TurnSummary({ ok: false, fault: `Codex thread/start error: ${JSON.stringify(threadResult.error)}` });
-    }
-
-    const threadId = threadResult.result?.threadId || `t_${Date.now()}`;
-
-    // Wait for turn completion (simplified — full item stream would need event parsing)
-    // In a production implementation, we'd listen for turn/completed and item/* notifications.
-    // For now, poll or wait for the first turn to complete.
-    const turnResult = await jsonRpcCall("turn/start", {
-      threadId,
-      signal: signal.aborted ? undefined : undefined,
-    });
-
-    if (turnResult.error) {
-      return new TurnSummary({ ok: false, fault: `Codex turn/start error: ${JSON.stringify(turnResult.error)}` });
-    }
-
-    // Handle streaming notifications — collect text from items
-    const items = turnResult.result?.items || [];
-    let fullText = "";
-
-    for (const item of items) {
-      if (item.type === "text" && item.content) {
-        fullText += item.content;
-        onEvent("text", item.content);
-      } else if (item.type === "tool_use") {
-        onEvent("action", {
-          ref: item.id || "",
-          label: item.name || "",
-          params: item.input || {},
-        });
-      } else if (item.type === "tool_result") {
-        onEvent("outcome", item.content || "");
-      }
-    }
-
-    if (fullText && Array.isArray(messages)) {
-      messages.push({ role: "assistant", content: fullText });
-    }
-
-    // Usage from thread token usage
-    try {
-      const usageResult = await jsonRpcCall("thread/tokenUsage/updated", { threadId });
-      if (usageResult?.result) {
-        tokensIn = usageResult.result.inputTokens || 0;
-        tokensOut = usageResult.result.outputTokens || 0;
-      }
-    } catch { /* usage not available for all models */ }
-
-    return new TurnSummary({
-      ok: true,
-      tokensIn,
-      tokensOut,
-    });
-  } catch (err) {
-    if (signal.aborted) {
-      return new TurnSummary({ ok: false, fault: "aborted" });
-    }
-    return new TurnSummary({ ok: false, fault: `Codex error: ${err.message}` });
+function handleLine(line) {
+  let message;
+  try { message = JSON.parse(line); } catch { return; }
+  if (respondToServerRequest(message)) return;
+  if (message.id != null) {
+    const request = pending.get(message.id);
+    if (!request) return;
+    pending.delete(message.id);
+    if (message.error) request.reject(new Error(JSON.stringify(message.error)));
+    else request.resolve(message.result);
+  } else if (message.method) {
+    routeNotification(message.method, message.params);
   }
 }
 
+async function ensureCodex() {
+  if (codexProcess && !codexProcess.killed && codexProcess.exitCode == null) return;
+  pending = new Map();
+  turnWaiters = new Map();
+  const { executable, args } = resolveCodexSpawn(process.env, process.platform);
+  codexProcess = spawn(executable, args, {
+    stdio: ["pipe", "pipe", "pipe"], env: { ...process.env }, windowsHide: true,
+  });
+  createInterface({ input: codexProcess.stdout }).on("line", handleLine);
+  codexProcess.stderr.on("data", (data) => process.stderr.write(`[codex] ${data}`));
+  codexProcess.on("exit", () => {
+    const error = new Error("Codex process exited");
+    for (const request of pending.values()) request.reject(error);
+    for (const waiter of turnWaiters.values()) waiter("process/exited", {});
+    pending.clear();
+    turnWaiters.clear();
+    codexProcess = null;
+  });
+  await new Promise((resolve, reject) => {
+    codexProcess.once("spawn", resolve);
+    codexProcess.once("error", reject);
+  });
+  await rpcCall("initialize", {
+    clientInfo: { name: "bark-agent-sdk", title: "Bark Agent SDK", version: "0.2.26" },
+    capabilities: { experimentalApi: true },
+  });
+  notify("initialized", {});
+}
 
-/**
- * Clean up codex subprocess.
- */
-export function killCodex() {
-  if (_codexProcess && !_codexProcess.killed) {
-    _codexProcess.kill();
-    _codexProcess = null;
+function waitForTurn(turnId, signal, onEvent) {
+  return new Promise((resolve, reject) => {
+    let text = "";
+    let usage = {};
+    const cleanup = () => {
+      turnWaiters.delete(turnId);
+      signal?.removeEventListener("abort", abort);
+    };
+    const abort = () => {
+      notify("turn/interrupt", { turnId });
+      cleanup();
+      reject(new Error("aborted"));
+    };
+    turnWaiters.set(turnId, (method, params) => {
+      if (method === "item/agentMessage/delta" && params.delta) {
+        text += params.delta;
+        onEvent("text", params.delta);
+      } else if (method === "item/reasoning/textDelta" && params.delta) {
+        onEvent("reason", params.delta);
+      } else if (method === "item/completed" && params.item?.type === "agentMessage" && !text) {
+        const completed = params.item.text || params.item.content || "";
+        if (completed) { text = completed; onEvent("text", completed); }
+      } else if (method === "thread/tokenUsage/updated") {
+        usage = params.tokenUsage?.last || params.tokenUsage || usage;
+      } else if (method === "turn/completed") {
+        cleanup();
+        resolve({ text, usage });
+      } else if (method === "turn/failed") {
+        cleanup();
+        reject(new Error(params.error?.message || params.turn?.error?.message || "Codex turn failed"));
+      } else if (method === "process/exited") {
+        cleanup();
+        reject(new Error("Codex process exited"));
+      }
+    });
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+function lastUserPrompt(messages) {
+  const last = [...(Array.isArray(messages) ? messages : [])].reverse()
+    .find((message) => message?.role === "user");
+  return typeof last?.content === "string" ? last.content : JSON.stringify(last?.content || "");
+}
+
+export async function runCodex(cfg, signal, onEvent, messages) {
+  try {
+    await ensureCodex();
+    const threadResult = await rpcCall("thread/start", buildThreadStartParams(cfg));
+    const threadId = threadResult?.thread?.id;
+    if (!threadId) throw new Error("Codex thread/start response missing thread.id");
+    const prompt = lastUserPrompt(messages);
+    const turnResult = await rpcCall("turn/start", buildTurnStartParams(threadId, prompt, cfg));
+    const turnId = turnResult?.turn?.id;
+    if (!turnId) throw new Error("Codex turn/start response missing turn.id");
+    const completed = await waitForTurn(turnId, signal, onEvent);
+    if (completed.text && Array.isArray(messages)) {
+      messages.push({ role: "assistant", content: completed.text });
+    }
+    const usage = completed.usage || {};
+    return new TurnSummary({
+      ok: true,
+      tokensIn: usage.inputTokens || 0,
+      tokensOut: usage.outputTokens || 0,
+      tokensCache: usage.cachedInputTokens || 0,
+    });
+  } catch (error) {
+    return new TurnSummary({ ok: false, fault: `Codex error: ${error.message}` });
   }
-  _codexPending.clear();
+}
+
+export function killCodex() {
+  if (codexProcess && !codexProcess.killed) codexProcess.kill();
+  codexProcess = null;
+  pending.clear();
+  turnWaiters.clear();
 }
