@@ -89,6 +89,8 @@ export class TurnSummary {
    * @param {number}  [src.tokensIn]
    * @param {number}  [src.tokensOut]
    * @param {number}  [src.tokensCache]
+   * @param {number}  [src.tokensCacheWrite]
+   * @param {number}  [src.durationMs]
    * @param {number}  [src.charge]
    * @param {number}  [src.rounds]
    */
@@ -103,6 +105,10 @@ export class TurnSummary {
     this.tokensOut = src.tokensOut || 0;
     /** @type {number} */
     this.tokensCache = src.tokensCache || 0;
+    /** @type {number} */
+    this.tokensCacheWrite = src.tokensCacheWrite || 0;
+    /** @type {number} */
+    this.durationMs = src.durationMs || 0;
     /** @type {number} */
     this.charge = src.charge || 0;
     /** @type {number} */

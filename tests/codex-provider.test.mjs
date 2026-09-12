@@ -5,6 +5,7 @@ import {
   buildTurnStartParams,
   resolveCodexSpawn,
 } from '../providers/codex.mjs';
+import { TurnSummary } from '../protocol/packets.mjs';
 
 test('Codex spawn supports an executable path containing spaces', () => {
   assert.deepEqual(resolveCodexSpawn({
@@ -43,4 +44,16 @@ test('Codex app-server requests use the current thread and turn schemas', () => 
     input: [{ type: 'text', text: 'hello' }],
     model: 'gpt-5.5',
   });
+});
+
+test('TurnSummary preserves Runtime usage metadata', () => {
+  const summary = new TurnSummary({
+    tokensIn: 10,
+    tokensOut: 4,
+    tokensCache: 7,
+    tokensCacheWrite: 3,
+    durationMs: 1250,
+  });
+  assert.equal(summary.tokensCacheWrite, 3);
+  assert.equal(summary.durationMs, 1250);
 });

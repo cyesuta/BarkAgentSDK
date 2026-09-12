@@ -135,7 +135,7 @@ async function ensureCodex() {
     codexProcess.once("error", reject);
   });
   await rpcCall("initialize", {
-    clientInfo: { name: "bark-agent-sdk", title: "Bark Agent SDK", version: "0.2.26" },
+    clientInfo: { name: "bark-agent-sdk", title: "Bark Agent SDK", version: "0.2.27" },
     capabilities: { experimentalApi: true },
   });
   notify("initialized", {});
@@ -188,6 +188,7 @@ function lastUserPrompt(messages) {
 }
 
 export async function runCodex(cfg, signal, onEvent, messages) {
+  const startedAt = Date.now();
   try {
     await ensureCodex();
     const threadResult = await rpcCall("thread/start", buildThreadStartParams(cfg));
@@ -202,11 +203,15 @@ export async function runCodex(cfg, signal, onEvent, messages) {
       messages.push({ role: "assistant", content: completed.text });
     }
     const usage = completed.usage || {};
+    const cachedInput = usage.cachedInputTokens || 0;
+    const cacheWrite = usage.cacheWriteInputTokens || 0;
     return new TurnSummary({
       ok: true,
-      tokensIn: usage.inputTokens || 0,
+      tokensIn: Math.max(0, (usage.inputTokens || 0) - cachedInput - cacheWrite),
       tokensOut: usage.outputTokens || 0,
-      tokensCache: usage.cachedInputTokens || 0,
+      tokensCache: cachedInput,
+      tokensCacheWrite: cacheWrite,
+      durationMs: Date.now() - startedAt,
     });
   } catch (error) {
     return new TurnSummary({ ok: false, fault: `Codex error: ${error.message}` });
