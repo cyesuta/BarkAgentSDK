@@ -17,6 +17,23 @@ export const CODEX_MODELS = Object.freeze([
   }),
 ]);
 
+export const DEEPSEEK_MODELS = Object.freeze([
+  Object.freeze({
+    id: "deepseek-flash",
+    displayName: "DeepSeek V4.1 Flash",
+    contextWindow: 1_000_000,
+    supportsVision: true,
+    supportsThinking: true,
+  }),
+]);
+
+export const GLM_MODELS = Object.freeze([
+  Object.freeze({ id: "glm-5.1", displayName: "GLM-5.1", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
+  Object.freeze({ id: "glm-5-turbo", displayName: "GLM-5 Turbo", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
+  Object.freeze({ id: "glm-4.7", displayName: "GLM-4.7", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
+  Object.freeze({ id: "glm-4.5-air", displayName: "GLM-4.5 Air", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
+]);
+
 export const OPENROUTER_MODELS = Object.freeze([
   Object.freeze({
     id: "openrouter/auto",
@@ -89,6 +106,8 @@ export const OPENROUTER_MODELS = Object.freeze([
  */
 export function listProviderModels(alias) {
   if (alias === "codex") return CODEX_MODELS;
+  if (alias === "deepseek") return DEEPSEEK_MODELS;
+  if (alias === "glm") return GLM_MODELS;
   if (alias === "openrouter") return OPENROUTER_MODELS;
   return [];
 }

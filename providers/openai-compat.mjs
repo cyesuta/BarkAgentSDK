@@ -11,7 +11,9 @@ import { parseOpenAIStream } from "./deepseek.mjs";
 const OPENAI_DEFAULTS = {
   kimi:   { endpoint: "https://api.moonshot.cn/v1/chat/completions",   model: "kimi-k3" },
   qwen:   { endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", model: "qwen-plus" },
-  glm:    { endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", model: "glm-5.2" },  // 5.2 仍是最新旗艦
+  // Z.AI Global Coding Plan endpoint. GLM_BASE_URL can still override this
+  // for the general API or the mainland BigModel service.
+  glm:    { endpoint: "https://api.z.ai/api/coding/paas/v4/chat/completions", model: "glm-5.1" },
   grok:   { endpoint: "https://api.x.ai/v1/chat/completions",          model: "grok-4.3" },
   doubao: { endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", model: "doubao-seed-2-0-pro-260215" },
   mimo:   { endpoint: "https://api.xiaomimimo.com/v1/chat/completions", model: "mimo-v2.5" },

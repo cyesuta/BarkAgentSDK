@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CODEX_MODELS, OPENROUTER_MODELS, listProviderModels } from '../providers/catalog.mjs';
+import { CODEX_MODELS, DEEPSEEK_MODELS, GLM_MODELS, OPENROUTER_MODELS, listProviderModels } from '../providers/catalog.mjs';
 
 test('Codex catalog includes the official GPT-6 Astra model metadata', () => {
   const astra = CODEX_MODELS.find((model) => model.id === 'gpt-6-astra');
@@ -30,4 +30,17 @@ test('OpenRouter catalog includes Stealth OX Alpha', () => {
   ]) assert.ok(OPENROUTER_MODELS.some((model) => model.id === id));
   assert.equal(listProviderModels('openrouter'), OPENROUTER_MODELS);
   assert.deepEqual(listProviderModels('unknown'), []);
+});
+
+test('provider catalogs expose current DeepSeek and Z.AI Coding Plan models', () => {
+  assert.deepEqual(DEEPSEEK_MODELS.map((model) => model.id), ['deepseek-flash']);
+  assert.equal(DEEPSEEK_MODELS[0].supportsVision, true);
+  assert.deepEqual(GLM_MODELS.map((model) => model.id), [
+    'glm-5.1',
+    'glm-5-turbo',
+    'glm-4.7',
+    'glm-4.5-air',
+  ]);
+  assert.equal(listProviderModels('deepseek'), DEEPSEEK_MODELS);
+  assert.equal(listProviderModels('glm'), GLM_MODELS);
 });
