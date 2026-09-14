@@ -36,11 +36,19 @@ test('provider catalogs expose current DeepSeek and Z.AI Coding Plan models', ()
   assert.deepEqual(DEEPSEEK_MODELS.map((model) => model.id), ['deepseek-flash']);
   assert.equal(DEEPSEEK_MODELS[0].supportsVision, true);
   assert.deepEqual(GLM_MODELS.map((model) => model.id), [
+    'glm-5.3',
+    'glm-5.3-flash',
     'glm-5.1',
     'glm-5-turbo',
     'glm-4.7',
     'glm-4.5-air',
   ]);
+  assert.deepEqual(GLM_MODELS[0], {
+    id: 'glm-5.3', displayName: 'GLM-5.3', contextWindow: 1_000_000,
+    maxOutputTokens: 128_000, supportsVision: false, supportsThinking: true,
+    reasoningEfforts: ['low', 'high', 'max'],
+  });
+  assert.equal(GLM_MODELS[1].supportsVision, true);
   assert.equal(listProviderModels('deepseek'), DEEPSEEK_MODELS);
   assert.equal(listProviderModels('glm'), GLM_MODELS);
 });

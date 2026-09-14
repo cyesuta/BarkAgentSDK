@@ -28,6 +28,8 @@ export const DEEPSEEK_MODELS = Object.freeze([
 ]);
 
 export const GLM_MODELS = Object.freeze([
+  Object.freeze({ id: "glm-5.3", displayName: "GLM-5.3", contextWindow: 1_000_000, maxOutputTokens: 128_000, supportsVision: false, supportsThinking: true, reasoningEfforts: Object.freeze(["low", "high", "max"]) }),
+  Object.freeze({ id: "glm-5.3-flash", displayName: "GLM-5.3 Flash", contextWindow: 1_000_000, maxOutputTokens: 128_000, supportsVision: true, supportsThinking: true, reasoningEfforts: Object.freeze(["low", "high", "max"]) }),
   Object.freeze({ id: "glm-5.1", displayName: "GLM-5.1", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
   Object.freeze({ id: "glm-5-turbo", displayName: "GLM-5 Turbo", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),
   Object.freeze({ id: "glm-4.7", displayName: "GLM-4.7", contextWindow: 200_000, supportsVision: false, supportsThinking: true }),

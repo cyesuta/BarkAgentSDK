@@ -19,8 +19,9 @@ const NATIVE_VISION_SET = new Set(["codex", "gemini"]);
  * @param {string} alias
  * @returns {boolean}
  */
-export function hasNativeVision(alias) {
-  return NATIVE_VISION_SET.has(alias);
+export function hasNativeVision(alias, model = "") {
+  return NATIVE_VISION_SET.has(alias)
+    || (alias === "glm" && String(model).toLowerCase() === "glm-5.3-flash");
 }
 
 /**
@@ -125,6 +126,17 @@ export function directPicturePass(text, imagesMap) {
         data: img.content || img.data || "",
       },
     });
+  }
+  return content;
+}
+
+/** OpenAI-compatible multimodal content used by GLM-5.3 Flash. */
+export function directOpenAIPicturePass(text, imagesMap) {
+  const content = [{ type: "text", text }];
+  for (const img of Object.values(imagesMap)) {
+    const mediaType = img.mediaType || "image/png";
+    const data = img.content || img.data || "";
+    content.push({ type: "image_url", image_url: { url: `data:${mediaType};base64,${data}` } });
   }
   return content;
 }

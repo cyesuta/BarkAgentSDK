@@ -49,6 +49,19 @@ const ENV_ENDPOINT_MAP = {
   custom: "BARK_CUSTOM_BASE_URL",
 };
 
+export function normalizeGlmReasoningEffort(cfg = {}) {
+  const tier = String(cfg.thinkingLevel || "").toLowerCase();
+  if (["normal", "low", "minimal", "light"].includes(tier)) return "low";
+  if (["deep", "medium", "high"].includes(tier)) return "high";
+  if (["max", "xhigh", "ultra"].includes(tier)) return "max";
+
+  const effort = String(cfg.reasoningEffort || "").toLowerCase();
+  if (["low", "minimal", "light"].includes(effort)) return "low";
+  if (["medium", "high"].includes(effort)) return "high";
+  if (["xhigh", "max", "ultra"].includes(effort)) return "max";
+  return "max";
+}
+
 /**
  * Run a generic OpenAI-compatible provider turn.
  * @param {string} alias
@@ -96,6 +109,10 @@ export async function runOpenAICompat(alias, cfg, signal, onEvent, messages, too
   if (tools && tools.length > 0) {
     body.tools = tools;
     body.tool_choice = "auto";
+  }
+  if (alias === "glm" && model.toLowerCase().startsWith("glm-5.3")) {
+    body.thinking = { type: "enabled" };
+    body.reasoning_effort = normalizeGlmReasoningEffort(cfg);
   }
   // OpenAI-compatible gateways do not agree on a reasoning switch. Keep the
   // response protocol (OpenAI) separate from the provider-specific request

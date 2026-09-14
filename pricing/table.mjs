@@ -34,6 +34,8 @@ export function pricingTable(alias, variant) {
   }
   if (prov === "qwen") return [2.5, 10.0, 1.0, true];
   if (prov === "glm") {
+    if (m.includes("5.3-flash"))               return [0.15, 0.5, 0.03, false]; // Z.AI Global USD
+    if (m.includes("5.3"))                     return [1.4, 4.4, 0.26, false];  // Z.AI Global USD
     if (m.includes("5.2"))                     return [10.0, 40.0, 2.0, true];   // glm-5.2 旗艦 1M ctx
     if (m.includes("5.1"))                     return [10.0, 32.0, 1.8, true];   // glm-5.1
     if (m.includes("5-turbo") || m.includes("5_turbo")) return [8.6, 28.8, 1.5, true]; // glm-5-turbo

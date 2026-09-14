@@ -24,6 +24,8 @@ export class BarkConfig {
    * @param {string} [src.endpointEnv]
    * @param {'openai'|'anthropic'} [src.apiFormat]
    * @param {'enable_thinking'|'think'|'reasoning_effort'|'none'} [src.thinkingParam]
+   * @param {string} [src.reasoningEffort]
+   * @param {string} [src.thinkingLevel]
    */
   constructor(src = {}) {
     this.guidance = src.guidance || "";
@@ -39,6 +41,8 @@ export class BarkConfig {
     this.endpointEnv = src.endpointEnv || "";
     this.apiFormat = src.apiFormat || "openai";
     this.thinkingParam = src.thinkingParam || "enable_thinking";
+    this.reasoningEffort = src.reasoningEffort || "medium";
+    this.thinkingLevel = src.thinkingLevel || "";
 
     Object.freeze(this);
   }

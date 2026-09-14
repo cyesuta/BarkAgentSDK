@@ -5,7 +5,7 @@ import { actionCycle } from '../tools/cycle.mjs';
 import { registerBuiltinActions } from '../tools/builtins.mjs';
 import { scanLocalActions, scanDispatcherTasks } from '../tools/scanner.mjs';
 import { buildActionHub } from '../tools/action.mjs';
-import { hasNativeVision, directPicturePass, outlinePicture, pictureNote } from '../tools/vision.mjs';
+import { hasNativeVision, directOpenAIPicturePass, directPicturePass, outlinePicture, pictureNote } from '../tools/vision.mjs';
 import { capabilityScanner, injectCapabilities } from '../skills/scanner.mjs';
 import { computeCharge } from '../pricing/table.mjs';
 import { resolveProvider } from '../providers/registry.mjs';
@@ -57,9 +57,12 @@ function buildSystemMessages(systemPrompt, cwd, options = {}) {
   return { messages, skills };
 }
 
-function buildUserMessage(text, pictures, provider) {
+function buildUserMessage(text, pictures, provider, model) {
   const hasImages = Object.keys(pictures).length > 0;
-  if (hasImages && hasNativeVision(provider)) {
+  if (hasImages && provider === 'glm' && String(model).toLowerCase() === 'glm-5.3-flash') {
+    return { role: 'user', content: directOpenAIPicturePass(text, pictures) };
+  }
+  if (hasImages && hasNativeVision(provider, model)) {
     return { role: 'user', content: directPicturePass(text, pictures) };
   }
 
@@ -208,12 +211,12 @@ export class Session {
       skillDirs: merged.skillDirs,
     });
     const msgs = [...systemMessages, ...this.vault.messages];
-    msgs.push(buildUserMessage(fullMessage, this.vault.pictures, provider));
+    msgs.push(buildUserMessage(fullMessage, this.vault.pictures, provider, model));
 
     let projectActions = [];
     try { projectActions = await scanLocalActions(cwd, { toolsDir: merged.toolsDir }); } catch { /* local tools are optional */ }
     try { projectActions.push(...await scanDispatcherTasks(cwd)); } catch { /* dispatcher tasks are optional */ }
-    if (Object.keys(this.vault.pictures).length > 0 && !hasNativeVision(provider)) {
+    if (Object.keys(this.vault.pictures).length > 0 && !hasNativeVision(provider, model)) {
       projectActions.push(...outlinePicture(this.vault.pictures));
     }
 
@@ -237,6 +240,8 @@ export class Session {
       endpointEnv: merged.baseUrlEnv || merged.endpointEnv || '',
       apiFormat,
       thinkingParam,
+      reasoningEffort: merged.reasoningEffort || "medium",
+      thinkingLevel: merged.thinkingLevel || "",
     });
 
     const emit = (event, payload) => {
